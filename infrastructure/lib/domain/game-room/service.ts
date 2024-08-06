@@ -69,13 +69,15 @@ export async function createGameRoom({
   return gameRoom;
 }
 
-export async function updateGameRoomByUserId({
+export async function updateGameRoom({
   redisClient,
   userId,
+  gameRoomCode,
   input,
 }: {
   redisClient: RedisClient;
   userId: string;
+  gameRoomCode: string;
   input: Partial<
     Pick<
       GameRoom,
@@ -84,7 +86,6 @@ export async function updateGameRoomByUserId({
       | "failureReason"
       | "players"
       | "questions"
-      | "timeUntilNextQuestion"
     >
   >;
 }) {
@@ -96,6 +97,12 @@ export async function updateGameRoomByUserId({
   if (!gameRoomForUser) {
     throw new Error(
       `User does not have an active game room for user ID ${userId}`
+    );
+  }
+
+  if (gameRoomForUser.code !== gameRoomCode) {
+    throw new Error(
+      "User does not have an active game room with the provided game room code"
     );
   }
 
@@ -186,8 +193,6 @@ export async function getGameRoomForUser({
   if (!gameRoomCode) {
     return null;
   }
-
-  console.log(`user has active game room: ${gameRoomCode}`);
 
   const gameRoomKey = makeGameRoomKey({
     gameRoomCode,

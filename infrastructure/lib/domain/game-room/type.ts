@@ -18,7 +18,6 @@ export const GameRoom = z.object({
   questions: z.array(Question),
   failureReason: z.string().optional(),
   currentQuestionIndex: z.number(),
-  timeUntilNextQuestion: z.number().optional(),
 });
 
 export type GameRoom = z.infer<typeof GameRoom>;

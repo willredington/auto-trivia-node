@@ -1,7 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as events from "aws-cdk-lib/aws-events";
 import * as eventTargets from "aws-cdk-lib/aws-events-targets";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sf from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
@@ -28,29 +27,6 @@ export class EventStack extends cdk.NestedStack {
     super(scope, id, props);
 
     this.eventBus = new events.EventBus(this, "EventBus");
-
-    const schedulerRole = new iam.Role(this, "scheduler-role", {
-      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
-    });
-
-    schedulerRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["events:PutEvents"],
-        resources: [this.eventBus.eventBusArn],
-      })
-    );
-
-    const lambdaSchedulerInteractionsPolicy = new iam.PolicyStatement({
-      actions: [
-        "scheduler:GetSchedule",
-        "scheduler:CreateSchedule",
-        "scheduler:CreateScheduleGroup",
-        "scheduler:GetScheduleGroup",
-        "iam:PassRole",
-      ],
-      resources: ["*"],
-    });
 
     const processGenerateTriviaQuestionsLambda = new nodejs.NodejsFunction(
       this,

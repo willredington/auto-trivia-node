@@ -42,6 +42,10 @@ export const handler = async (event: IncomingEventBridgeEvent) => {
       throw new Error("Game room not found");
     }
 
+    if (gameRoom.code !== gameRoomCode) {
+      throw new Error("Game room code does not match");
+    }
+
     const matchingExecutions = await findRunningMatchingGenerateTriviaExecution(
       {
         input: {
