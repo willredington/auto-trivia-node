@@ -124,6 +124,9 @@ export async function triggerGenerateTriviaQuestionsEvent({
           Source: EventSourceType.TRIVIA_QUESTIONS,
           DetailType: EventDetailType.GENERATE_TRIVIA_QUESTIONS,
           Detail: JSON.stringify(input),
+          EventBusName: getEnvironmentVariable(
+            RuntimeEnvironmentVariable.EVENT_BUS_NAME
+          ),
         },
       ],
     })

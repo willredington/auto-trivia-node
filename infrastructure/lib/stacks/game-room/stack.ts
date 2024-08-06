@@ -7,6 +7,7 @@ import { join } from "path";
 import {
   BuildTimeEnvironmentVariable,
   getEnvironmentVariable,
+  RuntimeEnvironmentVariable,
 } from "../../util/env";
 
 const getLambdaRelativeDirPath = (lambdaName: string) => {
@@ -34,6 +35,7 @@ export class GameRoomStack extends cdk.NestedStack {
         getEnvironmentVariable(
           BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_TOKEN
         ),
+      [RuntimeEnvironmentVariable.EVENT_BUS_NAME]: props.eventBus.eventBusName,
     };
 
     this.createGameRoomLambda = new nodejs.NodejsFunction(

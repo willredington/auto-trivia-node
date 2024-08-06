@@ -22,6 +22,29 @@ export class StateMachineStack extends cdk.NestedStack {
   constructor(scope: Construct, id: string, props?: StateMachineStackProps) {
     super(scope, id, props);
 
+    const redisEnvs = {
+      [BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_URL]:
+        getEnvironmentVariable(
+          BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_URL
+        ),
+      [BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_TOKEN]:
+        getEnvironmentVariable(
+          BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_TOKEN
+        ),
+    };
+
+    const updateGameRoomLambda = new nodejs.NodejsFunction(
+      this,
+      "UpdateGameRoomLambda",
+      {
+        entry: getLambdaRelativeDirPath("update-game-room.ts"),
+        timeout: cdk.Duration.minutes(5),
+        environment: {
+          ...redisEnvs,
+        },
+      }
+    );
+
     const generateTriviaQuestionsLambda = new nodejs.NodejsFunction(
       this,
       "GenerateTriviaQuestionsLambda",
@@ -39,6 +62,7 @@ export class StateMachineStack extends cdk.NestedStack {
     this.generateTriviaQuestionsStateMachine =
       createGenerateTriviaQuestionsStateMachine({
         scope: this,
+        updateGameRoomLambda,
         generateTriviaQuestionsLambda,
       });
   }
@@ -46,9 +70,11 @@ export class StateMachineStack extends cdk.NestedStack {
 
 function createGenerateTriviaQuestionsStateMachine({
   scope,
+  updateGameRoomLambda,
   generateTriviaQuestionsLambda,
 }: {
   scope: Construct;
+  updateGameRoomLambda: lambda.Function;
   generateTriviaQuestionsLambda: lambda.Function;
 }) {
   const generateTriviaQuestionsTask = new tasks.LambdaInvoke(
@@ -56,13 +82,29 @@ function createGenerateTriviaQuestionsStateMachine({
     "GenerateTriviaQuestionsTask",
     {
       lambdaFunction: generateTriviaQuestionsLambda,
+      resultPath: "$.triviaQuestions",
+    }
+  ).addRetry({
+    maxAttempts: 3,
+  });
+
+  const updateGameRoomTask = new tasks.LambdaInvoke(
+    scope,
+    "UpdateGameRoomTask",
+    {
+      lambdaFunction: updateGameRoomLambda,
+      payload: sf.TaskInput.fromObject({
+        userId: sf.JsonPath.stringAt("$.userId"),
+        gameRoomCode: sf.JsonPath.stringAt("$.gameRoomCode"),
+        triviaQuestions: sf.JsonPath.objectAt("$.triviaQuestions.Payload"),
+      }),
     }
   ).addRetry({
     maxAttempts: 3,
   });
 
   const stateMachineDefinition = sf.DefinitionBody.fromChainable(
-    generateTriviaQuestionsTask
+    generateTriviaQuestionsTask.next(updateGameRoomTask)
   );
 
   return new sf.StateMachine(scope, "GenerateTriviaQuestionsStateMachine", {

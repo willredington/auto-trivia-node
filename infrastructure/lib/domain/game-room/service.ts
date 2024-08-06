@@ -121,6 +121,38 @@ export async function updateGameRoomByUserId({
   await redisClient.set(gameRoomKey, JSON.stringify(updatedGameRoom), {
     ex: GAME_ROOM_TTL,
   });
+
+  return updatedGameRoom;
+}
+
+export async function deleteGameRoomByCode({
+  redisClient,
+  userId,
+  gameRoomCode,
+}: {
+  redisClient: RedisClient;
+  userId: string;
+  gameRoomCode: string;
+}) {
+  const gameRoom = await getGameRoomByCode({
+    redisClient,
+    gameRoomCode,
+  });
+
+  if (!gameRoom) {
+    throw new Error("Game room does not exist or has already been deleted");
+  }
+
+  const gameRoomKey = makeGameRoomKey({
+    gameRoomCode,
+  });
+
+  await deleteUserGameRoomCodeEntry({
+    redisClient,
+    userId,
+  });
+
+  await redisClient.del(gameRoomKey);
 }
 
 export async function getGameRoomByCode({

@@ -27,3 +27,11 @@ export const GenerateTriviaQuestionsOutput = z.object({
 export type GenerateTriviaQuestionsOutput = z.infer<
   typeof GenerateTriviaQuestionsOutput
 >;
+
+export const UpdateGameRoomInput = z.object({
+  gameRoomCode: z.string(),
+  userId: z.string(),
+  triviaQuestions: GenerateTriviaQuestionsOutput,
+});
+
+export type UpdateGameRoomInput = z.infer<typeof UpdateGameRoomInput>;

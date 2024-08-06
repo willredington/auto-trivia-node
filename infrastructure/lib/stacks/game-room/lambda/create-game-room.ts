@@ -1,7 +1,11 @@
 import { APIGatewayProxyWithCognitoAuthorizerHandler } from "aws-lambda";
 import { z } from "zod";
 import { extractUserIdFromClaims } from "../../../domain/auth";
-import { createGameRoom, getGameRoomForUser } from "../../../domain/game-room";
+import {
+  createGameRoom,
+  deleteGameRoomByCode,
+  getGameRoomForUser,
+} from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
 import { triggerGenerateTriviaQuestionsEvent } from "../../../domain/event";
@@ -26,7 +30,7 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
   );
 
   const jsonPayloadResult = ExpectedJsonPayload.safeParse(
-    JSON.stringify(event.body ?? "{}")
+    JSON.parse(event.body ?? "{}")
   );
 
   if (!jsonPayloadResult.success) {
@@ -65,13 +69,28 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
       },
     });
 
-    await triggerGenerateTriviaQuestionsEvent({
-      client: eventBridgeClient,
-      input: {
-        gameRoomCode: newGameRoom.code,
+    try {
+      await triggerGenerateTriviaQuestionsEvent({
+        client: eventBridgeClient,
+        input: {
+          gameRoomCode: newGameRoom.code,
+          userId,
+        },
+      });
+    } catch (err) {
+      console.error(
+        "Something went wrong trigger the generate trivia questions event, deleting game room",
+        newGameRoom
+      );
+
+      await deleteGameRoomByCode({
+        redisClient,
         userId,
-      },
-    });
+        gameRoomCode: newGameRoom.code,
+      });
+
+      throw err;
+    }
 
     return {
       statusCode: 201,
