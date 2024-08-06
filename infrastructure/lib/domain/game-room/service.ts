@@ -8,7 +8,7 @@ import { GameRoom, GameRoomStatus } from "./type";
 import { generateUniqueGameCode, makeGameRoomKey } from "./util";
 
 const GAME_ROOM_CODE_LEN = 6;
-const GAME_ROOM_TTL = 60 * 60 * 24; // 24 hours
+const GAME_ROOM_TTL = 60 * 60 * 2; // 2 hours
 
 export async function createGameRoom({
   redisClient,
@@ -17,10 +17,10 @@ export async function createGameRoom({
 }: {
   redisClient: RedisClient;
   userId: string;
-  input: Omit<
-    GameRoom,
-    "code" | "players" | "questions" | "currentQuestionIndex"
-  >;
+  input: {
+    title?: string;
+    topic: string;
+  };
 }) {
   const gameRoomCode = await generateUniqueGameCode({
     codeLen: GAME_ROOM_CODE_LEN,
@@ -36,8 +36,10 @@ export async function createGameRoom({
     currentQuestionIndex: 0,
     players: [],
     questions: [],
+    ownerId: userId,
     status: GameRoomStatus.IDLE,
     topic: input.topic,
+    title: input.title ?? input.topic,
   };
 
   await createUserGameRoomCodeEntry({
@@ -65,6 +67,60 @@ export async function createGameRoom({
   }
 
   return gameRoom;
+}
+
+export async function updateGameRoomByUserId({
+  redisClient,
+  userId,
+  input,
+}: {
+  redisClient: RedisClient;
+  userId: string;
+  input: Partial<
+    Pick<
+      GameRoom,
+      | "currentQuestionIndex"
+      | "status"
+      | "failureReason"
+      | "players"
+      | "questions"
+      | "timeUntilNextQuestion"
+    >
+  >;
+}) {
+  const gameRoomForUser = await getGameRoomForUser({
+    redisClient,
+    userId,
+  });
+
+  if (!gameRoomForUser) {
+    throw new Error(
+      `User does not have an active game room for user ID ${userId}`
+    );
+  }
+
+  const gameRoomKey = makeGameRoomKey({
+    gameRoomCode: gameRoomForUser.code,
+  });
+
+  const updatedGameRoom: GameRoom = {
+    ...gameRoomForUser,
+    ...input,
+  };
+
+  await createUserGameRoomCodeEntry({
+    redisClient,
+    ttlInSeconds: GAME_ROOM_TTL,
+    overwriteExisting: true,
+    input: {
+      gameRoomCode: gameRoomForUser.code,
+      userId,
+    },
+  });
+
+  await redisClient.set(gameRoomKey, JSON.stringify(updatedGameRoom), {
+    ex: GAME_ROOM_TTL,
+  });
 }
 
 export async function getGameRoomByCode({
@@ -98,6 +154,8 @@ export async function getGameRoomForUser({
   if (!gameRoomCode) {
     return null;
   }
+
+  console.log(`user has active game room: ${gameRoomCode}`);
 
   const gameRoomKey = makeGameRoomKey({
     gameRoomCode,

@@ -15,7 +15,7 @@ const getLambdaRelativeDirPath = (lambdaName: string) => {
   return join(__dirname, "lambda", lambdaName);
 };
 
-export type StateMachineStackProps = cdk.NestedStackProps;
+type StateMachineStackProps = cdk.NestedStackProps;
 
 export class StateMachineStack extends cdk.NestedStack {
   public generateTriviaQuestionsStateMachine: sf.StateMachine;

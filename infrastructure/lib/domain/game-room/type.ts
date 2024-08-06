@@ -10,11 +10,15 @@ export enum GameRoomStatus {
 
 export const GameRoom = z.object({
   code: z.string(),
+  title: z.string(),
   topic: z.string(),
+  ownerId: z.string(),
   players: z.array(z.string()),
   status: z.nativeEnum(GameRoomStatus),
   questions: z.array(Question),
+  failureReason: z.string().optional(),
   currentQuestionIndex: z.number(),
+  timeUntilNextQuestion: z.number().optional(),
 });
 
 export type GameRoom = z.infer<typeof GameRoom>;
