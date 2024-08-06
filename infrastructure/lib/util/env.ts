@@ -12,7 +12,7 @@ export enum RuntimeEnvironmentVariable {
   GENERATE_TRIVIA_QUESTIONS_STATE_MACHINE_ARN = "GENERATE_TRIVIA_QUESTIONS_STATE_MACHINE_ARN",
 }
 
-type AppEnvironmentVariable =
+export type AppEnvironmentVariable =
   | BuildTimeEnvironmentVariable
   | RuntimeEnvironmentVariable;
 

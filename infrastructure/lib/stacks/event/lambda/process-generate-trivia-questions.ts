@@ -1,7 +1,8 @@
-import { APIGatewayProxyWithCognitoAuthorizerHandler } from "aws-lambda";
-import { z } from "zod";
-import { jsonResponse } from "../../../util/http";
-import { extractUserIdFromClaims } from "../../../domain/auth";
+import { EventBridgeEvent } from "aws-lambda";
+import {
+  EventDetailType,
+  GenerateTriviaQuestionsEventDetail,
+} from "../../../domain/event";
 import { getGameRoomForUser } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import {
@@ -19,50 +20,26 @@ const QUESTIONS_LENGTH = 20;
 
 const redisClient = getRedisClient();
 
-const ExpectedJsonPayload = z.object({
-  gameRoomCode: z.string(),
-});
+type IncomingEventBridgeEvent = EventBridgeEvent<
+  EventDetailType.GENERATE_TRIVIA_QUESTIONS,
+  GenerateTriviaQuestionsEventDetail
+>;
 
-export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
-  event
-) => {
+const ExpectedEventDetail = GenerateTriviaQuestionsEventDetail;
+
+export const handler = async (event: IncomingEventBridgeEvent) => {
   console.log("event", JSON.stringify(event, null, 2));
 
-  const userId = extractUserIdFromClaims(
-    event.requestContext.authorizer.claims
-  );
-
-  const jsonPayloadResult = ExpectedJsonPayload.safeParse(
-    JSON.stringify(event.body ?? "{}")
-  );
-
-  if (!jsonPayloadResult.success) {
-    console.error("Invalid body", jsonPayloadResult.error);
-    return jsonResponse({
-      statusCode: 400,
-      body: {
-        message: "Invalid body",
-      },
-    });
-  }
-
-  const { gameRoomCode } = jsonPayloadResult.data;
+  const { userId, gameRoomCode } = ExpectedEventDetail.parse(event.detail);
 
   try {
-    // todo
-
     const gameRoom = await getGameRoomForUser({
       redisClient,
       userId,
     });
 
     if (!gameRoom) {
-      return jsonResponse({
-        statusCode: 404,
-        body: {
-          message: "Game room not found",
-        },
-      });
+      throw new Error("Game room not found");
     }
 
     const matchingExecutions = await findRunningMatchingGenerateTriviaExecution(
@@ -80,12 +57,7 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
     );
 
     if (matchingExecutions.length > 0) {
-      return jsonResponse({
-        statusCode: 409,
-        body: {
-          message: "Execution already in progress",
-        },
-      });
+      throw new Error("Matching execution already running");
     }
 
     const startGenerateTriviaQuestionsInput: GenerateTriviaQuestionsInput = {
@@ -105,24 +77,11 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
       ),
     });
 
-    return {
-      statusCode: 201,
-      body: JSON.stringify({
-        input: startGenerateTriviaQuestionsInput,
-        output: startResult,
-      }),
-    };
+    console.log("start result", JSON.stringify(startResult, null, 2));
   } catch (error) {
     console.error(
       "Error starting generate trivia questions state machine",
       error
     );
-
-    return jsonResponse({
-      statusCode: 500,
-      body: {
-        message: "Unexpected error",
-      },
-    });
   }
 };

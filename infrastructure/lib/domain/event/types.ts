@@ -20,6 +20,7 @@ export type UpdateGameRoomEventDetail = z.infer<
 >;
 
 export const GenerateTriviaQuestionsEventDetail = z.object({
+  userId: z.string(),
   gameRoomCode: z.string(),
 });
 

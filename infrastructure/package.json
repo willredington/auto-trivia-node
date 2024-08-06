@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.623.0",
+    "@aws-sdk/client-eventbridge": "^3.624.0",
     "@aws-sdk/client-scheduler": "^3.624.0",
     "@aws-sdk/client-sfn": "^3.623.0",
     "@aws-sdk/lib-dynamodb": "^3.623.0",

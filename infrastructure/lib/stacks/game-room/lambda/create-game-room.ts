@@ -4,8 +4,12 @@ import { extractUserIdFromClaims } from "../../../domain/auth";
 import { createGameRoom, getGameRoomForUser } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
+import { triggerGenerateTriviaQuestionsEvent } from "../../../domain/event";
+import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 
 const redisClient = getRedisClient();
+
+const eventBridgeClient = new EventBridgeClient();
 
 const ExpectedJsonPayload = z.object({
   topic: z.string(),
@@ -58,6 +62,14 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
       input: {
         title,
         topic,
+      },
+    });
+
+    await triggerGenerateTriviaQuestionsEvent({
+      client: eventBridgeClient,
+      input: {
+        gameRoomCode: newGameRoom.code,
+        userId,
       },
     });
 

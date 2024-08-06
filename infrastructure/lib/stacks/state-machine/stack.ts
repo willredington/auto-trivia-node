@@ -8,7 +8,6 @@ import { join } from "path";
 import {
   BuildTimeEnvironmentVariable,
   getEnvironmentVariable,
-  RuntimeEnvironmentVariable,
 } from "../../util/env";
 
 const getLambdaRelativeDirPath = (lambdaName: string) => {
@@ -19,7 +18,6 @@ type StateMachineStackProps = cdk.NestedStackProps;
 
 export class StateMachineStack extends cdk.NestedStack {
   public generateTriviaQuestionsStateMachine: sf.StateMachine;
-  public startGenerateTriviaQuestionsLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props?: StateMachineStackProps) {
     super(scope, id, props);
@@ -43,34 +41,6 @@ export class StateMachineStack extends cdk.NestedStack {
         scope: this,
         generateTriviaQuestionsLambda,
       });
-
-    this.startGenerateTriviaQuestionsLambda = new nodejs.NodejsFunction(
-      this,
-      "StartGenerateTriviaQuestionsLambda",
-      {
-        entry: getLambdaRelativeDirPath("start-generate-trivia-questions.ts"),
-        timeout: cdk.Duration.minutes(3),
-        environment: {
-          [RuntimeEnvironmentVariable.GENERATE_TRIVIA_QUESTIONS_STATE_MACHINE_ARN]:
-            this.generateTriviaQuestionsStateMachine.stateMachineArn,
-          [BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_URL]:
-            getEnvironmentVariable(
-              BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_URL
-            ),
-          [BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_TOKEN]:
-            getEnvironmentVariable(
-              BuildTimeEnvironmentVariable.UPSTASH_REDIS_REST_TOKEN
-            ),
-        },
-      }
-    );
-
-    this.generateTriviaQuestionsStateMachine.grant(
-      this.startGenerateTriviaQuestionsLambda,
-      "states:StartExecution",
-      "states:DescribeExecution",
-      "states:ListExecutions"
-    );
   }
 }
 
