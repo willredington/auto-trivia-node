@@ -1,18 +1,25 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { z } from "zod";
 import {
-  addNewPlayerToGameRoom,
-  generatePlayerToken,
   getGameRoomByCode,
+  recordPlayerAnswer,
+  validatePlayerToken,
 } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
 
 const redisClient = getRedisClient();
 
+const TOKEN_HEADER = "x-player-token";
+
+const ExpectedHeaders = z.object({
+  [TOKEN_HEADER]: z.string(),
+});
+
 const ExpectedJsonPayload = z.object({
-  name: z.string(),
   gameRoomCode: z.string(),
+  questionIndex: z.number(),
+  answer: z.string(),
 });
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -32,7 +39,39 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     });
   }
 
-  const { name, gameRoomCode } = jsonPayloadResult.data;
+  const { questionIndex, answer, gameRoomCode } = jsonPayloadResult.data;
+
+  const headersResult = ExpectedHeaders.safeParse(event.headers);
+
+  if (!headersResult.success) {
+    console.error("Player token not supplied", headersResult.error);
+    return jsonResponse({
+      statusCode: 401,
+      body: {
+        message: "Player token not supplied",
+      },
+    });
+  }
+
+  const playerToken = headersResult.data[TOKEN_HEADER];
+
+  try {
+    await validatePlayerToken({
+      redisClient,
+      input: {
+        gameRoomCode,
+        playerToken,
+      },
+    });
+  } catch (error) {
+    console.error("Could not validate player token", error);
+    return jsonResponse({
+      statusCode: 401,
+      body: {
+        message: "Invalid player token",
+      },
+    });
+  }
 
   try {
     const gameRoom = await getGameRoomByCode({
@@ -49,25 +88,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       });
     }
 
-    const playerToken = generatePlayerToken();
-
-    await addNewPlayerToGameRoom({
+    await recordPlayerAnswer({
       redisClient,
       input: {
         gameRoomCode,
         playerToken,
-        playerName: name,
+        questionIndex,
+        answer,
       },
     });
 
     return jsonResponse({
-      statusCode: 201,
+      statusCode: 200,
       body: {
         token: playerToken,
       },
     });
   } catch (error) {
-    console.error("Unexpected error adding player", error);
+    console.error("Unexpected error recording answer", error);
     return jsonResponse({
       statusCode: 500,
       body: {

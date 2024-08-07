@@ -12,6 +12,7 @@ export type ApiStackProps = cdk.NestedStackProps & {
   getGameRoomByCodeLambda: lambda.Function;
   getGameRoomByUserLambda: lambda.Function;
   nextQuestionLambda: lambda.Function;
+  recordAnswerLambda: lambda.Function;
 };
 
 export class ApiStack extends cdk.NestedStack {
@@ -58,14 +59,6 @@ export class ApiStack extends cdk.NestedStack {
         }
       );
 
-    gameRoomResource.addResource("join").addMethod(
-      "POST",
-      new apig.LambdaIntegration(props.joinGameRoomLambda)
-      // {
-      //   authorizer: appAuthorizer,
-      // }
-    );
-
     gameRoomResource
       .addResource("user")
       .addMethod(
@@ -76,11 +69,20 @@ export class ApiStack extends cdk.NestedStack {
         }
       );
 
+    // unauthenticated
     gameRoomResource
       .addResource("code")
       .addMethod(
         "GET",
         new apig.LambdaIntegration(props.getGameRoomByCodeLambda)
       );
+
+    gameRoomResource
+      .addResource("join")
+      .addMethod("POST", new apig.LambdaIntegration(props.joinGameRoomLambda));
+
+    gameRoomResource
+      .addResource("record")
+      .addMethod("POST", new apig.LambdaIntegration(props.recordAnswerLambda));
   }
 }

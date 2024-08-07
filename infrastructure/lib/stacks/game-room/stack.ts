@@ -25,6 +25,7 @@ export class GameRoomStack extends cdk.NestedStack {
   public startGameRoomLambda: lambda.Function;
   public joinGameRoomLambda: lambda.Function;
   public nextQuestionLambda: lambda.Function;
+  public recordAnswerLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: GameRoomStackProps) {
     super(scope, id, props);
@@ -108,6 +109,18 @@ export class GameRoomStack extends cdk.NestedStack {
       "NextQuestionLambda",
       {
         entry: getLambdaRelativeDirPath("next-question.ts"),
+        timeout: cdk.Duration.minutes(3),
+        environment: {
+          ...redisEnvs,
+        },
+      }
+    );
+
+    this.recordAnswerLambda = new nodejs.NodejsFunction(
+      this,
+      "RecordAnswerLambda",
+      {
+        entry: getLambdaRelativeDirPath("record-answer.ts"),
         timeout: cdk.Duration.minutes(3),
         environment: {
           ...redisEnvs,

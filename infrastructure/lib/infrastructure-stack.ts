@@ -3,7 +3,7 @@ import { Construct } from "constructs";
 import { StateMachineStack } from "./stacks/state-machine";
 import { EventStack } from "./stacks/event";
 import { GameRoomStack } from "./stacks/game-room";
-import { ApiStack } from "./stacks/api";
+import { ApiStack } from "./stacks/api/stack";
 
 type InfrastructureStackProps = cdk.StackProps & {
   cognitoUserPoolArn: string;
@@ -32,6 +32,7 @@ export class InfrastructureStack extends cdk.Stack {
       joinGameRoomLambda: gameRoomStack.joinGameRoomLambda,
       startGameRoomLambda: gameRoomStack.startGameRoomLambda,
       nextQuestionLambda: gameRoomStack.nextQuestionLambda,
+      recordAnswerLambda: gameRoomStack.recordAnswerLambda,
     });
   }
 }

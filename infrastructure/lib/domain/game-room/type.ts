@@ -12,6 +12,8 @@ export enum GameRoomStatus {
 export const Player = z.object({
   name: z.string(),
   token: z.string(),
+  score: z.number(),
+  answers: z.record(z.number(), z.string()),
 });
 
 export const GameRoom = z.object({

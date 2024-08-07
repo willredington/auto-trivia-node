@@ -149,7 +149,7 @@ export async function getGameRoomByCode({
 
   const value = await redisClient.hgetall(gameRoomKey);
 
-  return GameRoom.parse(value);
+  return GameRoom.nullable().parse(value);
 }
 
 export async function getGameRoomForUser({
@@ -177,7 +177,7 @@ export async function getGameRoomForUser({
   return GameRoom.parse(value);
 }
 
-export async function addPlayerToGameRoom({
+export async function addNewPlayerToGameRoom({
   redisClient,
   input,
 }: {
@@ -218,6 +218,8 @@ export async function addPlayerToGameRoom({
     {
       name: input.playerName,
       token: input.playerToken,
+      score: 0,
+      answers: {},
     },
   ];
 
@@ -228,4 +230,90 @@ export async function addPlayerToGameRoom({
       players: updatedPlayers,
     },
   });
+}
+
+export async function validatePlayerToken({
+  redisClient,
+  input,
+}: {
+  redisClient: RedisClient;
+  input: {
+    playerToken: string;
+    gameRoomCode: string;
+  };
+}) {
+  const gameRoom = await getGameRoomByCode({
+    gameRoomCode: input.gameRoomCode,
+    redisClient,
+  });
+
+  if (!gameRoom) {
+    throw new Error("Game room does not exist");
+  }
+
+  const tokenIsPresent = gameRoom.players.some(
+    (player) => player.token === input.playerToken
+  );
+
+  if (!tokenIsPresent) {
+    throw new Error("Could not find player token");
+  }
+}
+
+export async function recordPlayerAnswer({
+  redisClient,
+  input,
+}: {
+  redisClient: RedisClient;
+  input: {
+    playerToken: string;
+    questionIndex: number;
+    answer: string;
+    gameRoomCode: string;
+  };
+}) {
+  const gameRoom = await getGameRoomByCode({
+    gameRoomCode: input.gameRoomCode,
+    redisClient,
+  });
+
+  if (!gameRoom) {
+    throw new Error("Game room does not exist");
+  }
+
+  const tokenIsPresent = gameRoom.players.some(
+    (player) => player.token === input.playerToken
+  );
+
+  if (!tokenIsPresent) {
+    throw new Error("Could not find player token");
+  }
+
+  if (gameRoom.currentQuestionIndex !== input.questionIndex) {
+    throw new Error("Invalid question index");
+  }
+
+  const updatedPlayers = gameRoom.players.map((player) => {
+    if (player.token === input.playerToken) {
+      return {
+        ...player,
+        answers: {
+          ...player.answers,
+          [input.questionIndex]: input.answer,
+        },
+      };
+    }
+
+    return player;
+  });
+
+  await updateGameRoom({
+    redisClient,
+    gameRoomCode: input.gameRoomCode,
+    updateInput: {
+      players: updatedPlayers,
+    },
+  });
+
+  return updatedPlayers;
 }
