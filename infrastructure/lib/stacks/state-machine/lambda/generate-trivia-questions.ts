@@ -14,7 +14,7 @@ const GENERATE_TRIVIA_PROMPT_ID = "sagemaster/trivia_generator";
 
 const llm = new OpenAI({
   model: "gpt-4o",
-  timeout: 1000 * 60 * 3, // 3 minutes
+  timeout: 1000 * 60 * 5, // 5 minutes
   apiKey: getEnvironmentVariable(BuildTimeEnvironmentVariable.OPENAI_API_KEY),
 });
 

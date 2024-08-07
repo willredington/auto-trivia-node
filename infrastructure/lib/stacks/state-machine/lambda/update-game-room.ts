@@ -17,7 +17,7 @@ export const handler: Handler = async (incomingEvent) => {
     redisClient,
     gameRoomCode: event.gameRoomCode,
     updateInput: {
-      status: GameRoomStatus.FINISHED,
+      status: GameRoomStatus.READY,
       questions: mapTriviaQuestionsToQuestions({
         triviaQuestions: event.triviaQuestions.questions,
       }),

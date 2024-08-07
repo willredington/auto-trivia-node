@@ -7,8 +7,11 @@ import { Construct } from "constructs";
 export type ApiStackProps = cdk.NestedStackProps & {
   cognitoUserPoolArn: string;
   createGameRoomLambda: lambda.Function;
+  startGameRoomLambda: lambda.Function;
+  joinGameRoomLambda: lambda.Function;
   getGameRoomByCodeLambda: lambda.Function;
   getGameRoomByUserLambda: lambda.Function;
+  nextQuestionLambda: lambda.Function;
 };
 
 export class ApiStack extends cdk.NestedStack {
@@ -35,12 +38,32 @@ export class ApiStack extends cdk.NestedStack {
 
     const gameRoomResource = this.api.root.addResource("game-room");
 
-    gameRoomResource.addMethod(
+    gameRoomResource
+      .addResource("create")
+      .addMethod(
+        "POST",
+        new apig.LambdaIntegration(props.createGameRoomLambda),
+        {
+          authorizer: appAuthorizer,
+        }
+      );
+
+    gameRoomResource
+      .addResource("start")
+      .addMethod(
+        "POST",
+        new apig.LambdaIntegration(props.startGameRoomLambda),
+        {
+          authorizer: appAuthorizer,
+        }
+      );
+
+    gameRoomResource.addResource("join").addMethod(
       "POST",
-      new apig.LambdaIntegration(props.createGameRoomLambda),
-      {
-        authorizer: appAuthorizer,
-      }
+      new apig.LambdaIntegration(props.joinGameRoomLambda)
+      // {
+      //   authorizer: appAuthorizer,
+      // }
     );
 
     gameRoomResource

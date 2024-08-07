@@ -3,6 +3,7 @@ import { Question } from "../question";
 
 export enum GameRoomStatus {
   IDLE = "IDLE",
+  READY = "READY",
   IN_PROGRESS = "IN_PROGRESS",
   FINISHED = "FINISHED",
   FAILED = "FAILED",

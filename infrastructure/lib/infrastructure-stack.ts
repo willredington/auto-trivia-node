@@ -29,6 +29,9 @@ export class InfrastructureStack extends cdk.Stack {
       createGameRoomLambda: gameRoomStack.createGameRoomLambda,
       getGameRoomByCodeLambda: gameRoomStack.getGameRoomByCodeLambda,
       getGameRoomByUserLambda: gameRoomStack.getGameRoomByUserLambda,
+      joinGameRoomLambda: gameRoomStack.joinGameRoomLambda,
+      startGameRoomLambda: gameRoomStack.startGameRoomLambda,
+      nextQuestionLambda: gameRoomStack.nextQuestionLambda,
     });
   }
 }
