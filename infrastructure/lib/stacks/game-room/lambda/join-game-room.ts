@@ -1,21 +1,12 @@
-import {
-  APIGatewayProxyHandler,
-  APIGatewayProxyWithCognitoAuthorizerHandler,
-} from "aws-lambda";
+import { APIGatewayProxyHandler } from "aws-lambda";
 import { z } from "zod";
-import { extractUserIdFromClaims } from "../../../domain/auth";
 import {
   addPlayerToGameRoom,
-  createGameRoom,
-  deleteGameRoomByCode,
   generatePlayerToken,
   getGameRoomByCode,
-  getGameRoomForUser,
 } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
-import { triggerGenerateTriviaQuestionsEvent } from "../../../domain/event";
-import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 
 const redisClient = getRedisClient();
 

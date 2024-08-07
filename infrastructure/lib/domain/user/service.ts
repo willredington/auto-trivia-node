@@ -4,13 +4,9 @@ import { makeUserKey } from "./util";
 
 export async function createUserGameRoomCodeEntry({
   redisClient,
-  ttlInSeconds,
-  overwriteExisting,
   input,
 }: {
   redisClient: RedisClient;
-  ttlInSeconds: number;
-  overwriteExisting?: boolean;
   input: {
     gameRoomCode: string;
     userId: string;
@@ -22,15 +18,13 @@ export async function createUserGameRoomCodeEntry({
 
   const keyExists = await redisClient.exists(key);
 
-  if (keyExists === 1 && !overwriteExisting) {
-    throw new Error(
-      `User with id ${input.userId} already has a game room code`
+  if (keyExists === 1) {
+    console.log(
+      `User with id ${input.userId} already has a game room code entry`
     );
   }
 
-  await redisClient.set(key, input.gameRoomCode, {
-    ex: ttlInSeconds,
-  });
+  await redisClient.set(key, input.gameRoomCode);
 }
 
 export async function getUserGameRoomCode({

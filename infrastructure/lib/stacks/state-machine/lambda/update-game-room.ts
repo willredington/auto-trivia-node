@@ -1,8 +1,5 @@
 import { Handler } from "aws-lambda";
-import {
-  GameRoomStatus,
-  updateGameRoomByUserId,
-} from "../../../domain/game-room";
+import { GameRoomStatus, updateGameRoom } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import {
   mapTriviaQuestionsToQuestions,
@@ -16,10 +13,10 @@ export const handler: Handler = async (incomingEvent) => {
 
   const event = UpdateGameRoomInput.parse(incomingEvent);
 
-  return await updateGameRoomByUserId({
+  return await updateGameRoom({
     redisClient,
-    userId: event.userId,
-    input: {
+    gameRoomCode: event.gameRoomCode,
+    updateInput: {
       status: GameRoomStatus.FINISHED,
       questions: mapTriviaQuestionsToQuestions({
         triviaQuestions: event.triviaQuestions.questions,

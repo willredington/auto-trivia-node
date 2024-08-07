@@ -4,12 +4,13 @@ import {
   deleteUserGameRoomCodeEntry,
   getUserGameRoomCode,
 } from "../user";
+import {
+  GAME_ROOM_CODE_LEN,
+  GAME_ROOM_MAX_PLAYER_COUNT,
+  GAME_ROOM_TTL,
+} from "./constant";
 import { GameRoom, GameRoomStatus } from "./type";
 import { generateUniqueGameCode, makeGameRoomKey } from "./util";
-
-const GAME_ROOM_MAX_PLAYER_COUNT = 10;
-const GAME_ROOM_CODE_LEN = 6;
-const GAME_ROOM_TTL = 60 * 60 * 4; // 4 hours
 
 export async function createGameRoom({
   redisClient,
@@ -46,7 +47,6 @@ export async function createGameRoom({
 
   await createUserGameRoomCodeEntry({
     redisClient,
-    ttlInSeconds: GAME_ROOM_TTL,
     input: {
       gameRoomCode,
       userId,
@@ -54,9 +54,8 @@ export async function createGameRoom({
   });
 
   try {
-    await redisClient.set(gameRoomKey, JSON.stringify(gameRoom), {
-      ex: GAME_ROOM_TTL,
-    });
+    await redisClient.hset(gameRoomKey, gameRoom);
+    await redisClient.expire(gameRoomKey, GAME_ROOM_TTL);
   } catch (err) {
     console.error(err);
 
@@ -74,11 +73,11 @@ export async function createGameRoom({
 export async function updateGameRoom({
   redisClient,
   gameRoomCode,
-  input,
+  updateInput,
 }: {
   redisClient: RedisClient;
   gameRoomCode: string;
-  input: Partial<
+  updateInput: Partial<
     Pick<
       GameRoom,
       | "currentQuestionIndex"
@@ -102,26 +101,9 @@ export async function updateGameRoom({
     gameRoomCode,
   });
 
-  const updatedGameRoom: GameRoom = {
-    ...gameRoom,
-    ...input,
-  };
+  await redisClient.hset(gameRoomKey, updateInput);
 
-  await createUserGameRoomCodeEntry({
-    redisClient,
-    ttlInSeconds: GAME_ROOM_TTL,
-    overwriteExisting: true,
-    input: {
-      gameRoomCode,
-      userId: updatedGameRoom.ownerId,
-    },
-  });
-
-  await redisClient.set(gameRoomKey, JSON.stringify(updatedGameRoom), {
-    ex: GAME_ROOM_TTL,
-  });
-
-  return updatedGameRoom;
+  return updateInput;
 }
 
 export async function deleteGameRoomByCode({
@@ -165,7 +147,7 @@ export async function getGameRoomByCode({
     gameRoomCode,
   });
 
-  const value = await redisClient.get(gameRoomKey);
+  const value = await redisClient.hgetall(gameRoomKey);
 
   return GameRoom.parse(value);
 }
@@ -190,7 +172,7 @@ export async function getGameRoomForUser({
     gameRoomCode,
   });
 
-  const value = await redisClient.get(gameRoomKey);
+  const value = await redisClient.hgetall(gameRoomKey);
 
   return GameRoom.parse(value);
 }
@@ -215,19 +197,19 @@ export async function addPlayerToGameRoom({
     throw new Error("Game room does not exist");
   }
 
-  const tokenExists = gameRoom.players.some(
+  const tokenAlreadyPresent = gameRoom.players.some(
     (player) => player.token === input.playerToken
   );
 
-  if (tokenExists) {
+  if (tokenAlreadyPresent) {
     throw new Error("Player token already exists");
   }
 
-  const nameExists = gameRoom.players.some(
+  const nameAlreadyPresent = gameRoom.players.some(
     (player) => player.name === input.playerName
   );
 
-  if (nameExists) {
+  if (nameAlreadyPresent) {
     throw new Error("Player name already exists");
   }
 
@@ -242,7 +224,7 @@ export async function addPlayerToGameRoom({
   await updateGameRoom({
     redisClient,
     gameRoomCode: input.gameRoomCode,
-    input: {
+    updateInput: {
       players: updatedPlayers,
     },
   });
