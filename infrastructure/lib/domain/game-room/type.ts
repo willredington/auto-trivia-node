@@ -13,6 +13,7 @@ export const GameRoom = z.object({
   title: z.string(),
   topic: z.string(),
   ownerId: z.string(),
+  maxPlayerCount: z.number(),
   players: z.array(
     z.object({
       name: z.string(),

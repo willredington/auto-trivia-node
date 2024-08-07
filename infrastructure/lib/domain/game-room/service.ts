@@ -7,6 +7,7 @@ import {
 import { GameRoom, GameRoomStatus } from "./type";
 import { generateUniqueGameCode, makeGameRoomKey } from "./util";
 
+const GAME_ROOM_MAX_PLAYER_COUNT = 10;
 const GAME_ROOM_CODE_LEN = 6;
 const GAME_ROOM_TTL = 60 * 60 * 4; // 4 hours
 
@@ -32,14 +33,15 @@ export async function createGameRoom({
   });
 
   const gameRoom: GameRoom = {
-    code: gameRoomCode,
-    currentQuestionIndex: 0,
     players: [],
     questions: [],
     ownerId: userId,
-    status: GameRoomStatus.IDLE,
     topic: input.topic,
+    code: gameRoomCode,
+    currentQuestionIndex: 0,
+    status: GameRoomStatus.IDLE,
     title: input.title ?? input.topic,
+    maxPlayerCount: GAME_ROOM_MAX_PLAYER_COUNT,
   };
 
   await createUserGameRoomCodeEntry({
