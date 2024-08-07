@@ -66,9 +66,8 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
     }
 
     const updatedGameRoom = await updateGameRoom({
-      gameRoomCode: gameRoom.code,
       redisClient,
-      userId,
+      gameRoomCode: gameRoom.code,
       input: {
         status: GameRoomStatus.IN_PROGRESS,
       },

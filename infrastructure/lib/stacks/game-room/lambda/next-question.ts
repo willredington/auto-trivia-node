@@ -1,11 +1,7 @@
 import { APIGatewayProxyWithCognitoAuthorizerHandler } from "aws-lambda";
 import { z } from "zod";
 import { extractUserIdFromClaims } from "../../../domain/auth";
-import {
-  GameRoomStatus,
-  getGameRoomForUser,
-  updateGameRoom,
-} from "../../../domain/game-room";
+import { getGameRoomForUser, updateGameRoom } from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
 
@@ -77,9 +73,8 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
     }
 
     const updatedGameRoom = await updateGameRoom({
-      gameRoomCode: gameRoom.code,
       redisClient,
-      userId,
+      gameRoomCode: gameRoom.code,
       input: {
         currentQuestionIndex: nextIndex,
       },

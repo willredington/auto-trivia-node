@@ -1,8 +1,8 @@
 import * as cdk from "aws-cdk-lib";
+import * as events from "aws-cdk-lib/aws-events";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
-import * as events from "aws-cdk-lib/aws-events";
 import { join } from "path";
 import {
   BuildTimeEnvironmentVariable,
@@ -22,6 +22,8 @@ export class GameRoomStack extends cdk.NestedStack {
   public createGameRoomLambda: lambda.Function;
   public getGameRoomByCodeLambda: lambda.Function;
   public getGameRoomByUserLambda: lambda.Function;
+  public startGameRoomLambda: lambda.Function;
+  public nextQuestionLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: GameRoomStackProps) {
     super(scope, id, props);
@@ -69,6 +71,30 @@ export class GameRoomStack extends cdk.NestedStack {
       "GetGameRoomByUserLambda",
       {
         entry: getLambdaRelativeDirPath("get-game-room-by-user.ts"),
+        timeout: cdk.Duration.minutes(3),
+        environment: {
+          ...redisEnvs,
+        },
+      }
+    );
+
+    this.startGameRoomLambda = new nodejs.NodejsFunction(
+      this,
+      "StartGameRoomLambda",
+      {
+        entry: getLambdaRelativeDirPath("start-game-room.ts"),
+        timeout: cdk.Duration.minutes(3),
+        environment: {
+          ...redisEnvs,
+        },
+      }
+    );
+
+    this.nextQuestionLambda = new nodejs.NodejsFunction(
+      this,
+      "NextQuestionLambda",
+      {
+        entry: getLambdaRelativeDirPath("next-question.ts"),
         timeout: cdk.Duration.minutes(3),
         environment: {
           ...redisEnvs,

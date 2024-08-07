@@ -13,7 +13,12 @@ export const GameRoom = z.object({
   title: z.string(),
   topic: z.string(),
   ownerId: z.string(),
-  players: z.array(z.string()),
+  players: z.array(
+    z.object({
+      name: z.string(),
+      token: z.string(),
+    })
+  ),
   status: z.nativeEnum(GameRoomStatus),
   questions: z.array(Question),
   failureReason: z.string().optional(),

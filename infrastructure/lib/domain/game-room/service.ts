@@ -8,7 +8,7 @@ import { GameRoom, GameRoomStatus } from "./type";
 import { generateUniqueGameCode, makeGameRoomKey } from "./util";
 
 const GAME_ROOM_CODE_LEN = 6;
-const GAME_ROOM_TTL = 60 * 60 * 2; // 2 hours
+const GAME_ROOM_TTL = 60 * 60 * 4; // 4 hours
 
 export async function createGameRoom({
   redisClient,
@@ -71,12 +71,10 @@ export async function createGameRoom({
 
 export async function updateGameRoom({
   redisClient,
-  userId,
   gameRoomCode,
   input,
 }: {
   redisClient: RedisClient;
-  userId: string;
   gameRoomCode: string;
   input: Partial<
     Pick<
@@ -89,29 +87,21 @@ export async function updateGameRoom({
     >
   >;
 }) {
-  const gameRoomForUser = await getGameRoomForUser({
+  const gameRoom = await getGameRoomByCode({
     redisClient,
-    userId,
+    gameRoomCode,
   });
 
-  if (!gameRoomForUser) {
-    throw new Error(
-      `User does not have an active game room for user ID ${userId}`
-    );
-  }
-
-  if (gameRoomForUser.code !== gameRoomCode) {
-    throw new Error(
-      "User does not have an active game room with the provided game room code"
-    );
+  if (!gameRoom) {
+    throw new Error("Game room does not exist");
   }
 
   const gameRoomKey = makeGameRoomKey({
-    gameRoomCode: gameRoomForUser.code,
+    gameRoomCode,
   });
 
   const updatedGameRoom: GameRoom = {
-    ...gameRoomForUser,
+    ...gameRoom,
     ...input,
   };
 
@@ -120,8 +110,8 @@ export async function updateGameRoom({
     ttlInSeconds: GAME_ROOM_TTL,
     overwriteExisting: true,
     input: {
-      gameRoomCode: gameRoomForUser.code,
-      userId,
+      gameRoomCode,
+      userId: updatedGameRoom.ownerId,
     },
   });
 
@@ -201,4 +191,57 @@ export async function getGameRoomForUser({
   const value = await redisClient.get(gameRoomKey);
 
   return GameRoom.parse(value);
+}
+
+export async function addPlayerToGameRoom({
+  redisClient,
+  input,
+}: {
+  redisClient: RedisClient;
+  input: {
+    playerName: string;
+    playerToken: string;
+    gameRoomCode: string;
+  };
+}) {
+  const gameRoom = await getGameRoomByCode({
+    gameRoomCode: input.gameRoomCode,
+    redisClient,
+  });
+
+  if (!gameRoom) {
+    throw new Error("Game room does not exist");
+  }
+
+  const tokenExists = gameRoom.players.some(
+    (player) => player.token === input.playerToken
+  );
+
+  if (tokenExists) {
+    throw new Error("Player token already exists");
+  }
+
+  const nameExists = gameRoom.players.some(
+    (player) => player.name === input.playerName
+  );
+
+  if (nameExists) {
+    throw new Error("Player name already exists");
+  }
+
+  const updatedPlayers: GameRoom["players"] = [
+    ...gameRoom.players,
+    {
+      name: input.playerName,
+      token: input.playerToken,
+    },
+  ];
+
+  await updateGameRoom({
+    redisClient,
+    gameRoomCode: input.gameRoomCode,
+    input: {
+      players: updatedPlayers,
+    },
+  });
 }

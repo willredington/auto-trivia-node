@@ -1,4 +1,5 @@
 import { RedisClient } from "../redis";
+import { randomBytes } from "crypto";
 
 export function makeGameRoomKey({ gameRoomCode }: { gameRoomCode: string }) {
   return `gameRoom:${gameRoomCode}`;
@@ -43,4 +44,9 @@ export async function generateUniqueGameCode({
   throw new Error(
     `Failed to generate unique game code after ${maxIterations} iterations`
   );
+}
+
+export function generatePlayerToken() {
+  const buffer = randomBytes(16);
+  return buffer.toString("hex");
 }
