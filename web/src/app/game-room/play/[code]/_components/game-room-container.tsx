@@ -1,12 +1,18 @@
 import { Badge } from "~/components/ui/badge";
 import { type GameRoom } from "~/server/service/game";
 import { Question } from "./question";
+import { Loader2 } from "lucide-react";
 
 export const GameRoomContainer = ({ gameRoom }: { gameRoom: GameRoom }) => {
   const activeQuestion = gameRoom.questions[gameRoom.currentQuestionIndex];
 
   if (!activeQuestion) {
-    return <div>Getting things ready...</div>;
+    return (
+      <div className="flex space-x-4">
+        <p>Getting things ready...</p>
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   }
 
   return (

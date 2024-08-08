@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -15,12 +16,14 @@ export const CreateGameRoomForm = async ({
     const topic = formData.get("topic") as string;
 
     if (topic) {
-      await createGameRoom({
+      const gameRoom = await createGameRoom({
         authToken,
         input: {
           topic: formData.get("topic") as string,
         },
       });
+
+      redirect(`/game-room/play/${gameRoom.code}`);
     }
   };
 
