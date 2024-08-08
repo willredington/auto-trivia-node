@@ -1,45 +1,81 @@
-import { APIGatewayProxyWithCognitoAuthorizerHandler } from "aws-lambda";
+import { APIGatewayProxyHandler } from "aws-lambda";
 import { z } from "zod";
-import { extractUserIdFromClaims } from "../../../domain/auth";
-import { getGameRoomForUser, updateGameRoom } from "../../../domain/game-room";
+import {
+  getGameRoomByCode,
+  updateGameRoom,
+  validatePlayerToken,
+} from "../../../domain/game-room";
 import { getRedisClient } from "../../../domain/redis";
 import { jsonResponse } from "../../../util/http";
 
 const redisClient = getRedisClient();
 
-const ExpectedQueryParameters = z.object({
-  gameRoomCode: z.string(),
+const TOKEN_HEADER = "x-player-token";
+
+const ExpectedHeaders = z.object({
+  [TOKEN_HEADER]: z.string(),
 });
 
-export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
-  event
-) => {
+const ExpectedJsonPayload = z.object({
+  gameRoomCode: z.string(),
+  nextQuestionIndex: z.number(),
+});
+
+export const handler: APIGatewayProxyHandler = async (event) => {
   console.log("event", JSON.stringify(event, null, 2));
 
-  const userId = extractUserIdFromClaims(
-    event.requestContext.authorizer.claims
+  const jsonPayloadResult = ExpectedJsonPayload.safeParse(
+    JSON.parse(event.body || "{}")
   );
 
-  const queryParametersResult = ExpectedQueryParameters.safeParse(
-    event.queryStringParameters
-  );
-
-  if (!queryParametersResult.success) {
-    console.error("Invalid query parameters", queryParametersResult.error);
+  if (!jsonPayloadResult.success) {
+    console.error("Invalid body", jsonPayloadResult.error);
     return jsonResponse({
       statusCode: 400,
       body: {
-        message: "Invalid parameters",
+        message: "Invalid body",
       },
     });
   }
 
-  const { gameRoomCode } = queryParametersResult.data;
+  const { nextQuestionIndex, gameRoomCode } = jsonPayloadResult.data;
+
+  const headersResult = ExpectedHeaders.safeParse(event.headers);
+
+  if (!headersResult.success) {
+    console.error("Player token not supplied", headersResult.error);
+    return jsonResponse({
+      statusCode: 401,
+      body: {
+        message: "Player token not supplied",
+      },
+    });
+  }
+
+  const playerToken = headersResult.data[TOKEN_HEADER];
 
   try {
-    const gameRoom = await getGameRoomForUser({
+    await validatePlayerToken({
       redisClient,
-      userId,
+      input: {
+        gameRoomCode,
+        playerToken,
+      },
+    });
+  } catch (error) {
+    console.error("Could not validate player token", error);
+    return jsonResponse({
+      statusCode: 401,
+      body: {
+        message: "Invalid player token",
+      },
+    });
+  }
+
+  try {
+    const gameRoom = await getGameRoomByCode({
+      redisClient,
+      gameRoomCode,
     });
 
     if (!gameRoom) {
@@ -51,41 +87,24 @@ export const handler: APIGatewayProxyWithCognitoAuthorizerHandler = async (
       });
     }
 
-    if (gameRoom.code !== gameRoomCode) {
-      console.error("Game room code does not match");
-      return jsonResponse({
-        statusCode: 403,
-        body: {
-          message: "Forbidden",
-        },
-      });
-    }
+    // TODO: Validate that the question index is within the bounds of the questions array
 
-    const nextIndex = gameRoom.currentQuestionIndex + 1;
-
-    if (nextIndex >= gameRoom.questions.length) {
-      return jsonResponse({
-        statusCode: 400,
-        body: {
-          message: "No more questions",
-        },
-      });
-    }
-
-    const updatedGameRoom = await updateGameRoom({
+    await updateGameRoom({
+      gameRoomCode,
       redisClient,
-      gameRoomCode: gameRoom.code,
       updateInput: {
-        currentQuestionIndex: nextIndex,
+        currentQuestionIndex: nextQuestionIndex,
       },
     });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(updatedGameRoom),
-    };
+    return jsonResponse({
+      statusCode: 204,
+      body: {
+        message: "No content",
+      },
+    });
   } catch (error) {
-    console.error("Unexpected error while updating game room", error);
+    console.error("Unexpected error", error);
     return jsonResponse({
       statusCode: 500,
       body: {

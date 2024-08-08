@@ -84,5 +84,9 @@ export class ApiStack extends cdk.NestedStack {
     gameRoomResource
       .addResource("record")
       .addMethod("POST", new apig.LambdaIntegration(props.recordAnswerLambda));
+
+    gameRoomResource
+      .addResource("next")
+      .addMethod("POST", new apig.LambdaIntegration(props.nextQuestionLambda));
   }
 }

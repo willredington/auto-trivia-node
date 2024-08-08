@@ -15,7 +15,9 @@ const MultipleChoiceQuestion = BaseQuestion.extend({
   answer: z.string(),
 });
 
-const Question = MultipleChoiceQuestion;
+export const Question = MultipleChoiceQuestion;
+
+export type Question = z.infer<typeof Question>;
 
 enum GameRoomStatus {
   IDLE = "IDLE",

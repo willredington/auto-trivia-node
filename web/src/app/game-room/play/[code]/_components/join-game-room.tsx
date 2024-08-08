@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { joinGameRoom } from "~/server/service/game";
+import { joinGameRoom, setPlayerTokenCookie } from "~/server/service/player";
 
 export const JoinGameRoom = ({ gameRoomCode }: { gameRoomCode: string }) => {
   const submitForm = async (formData: FormData) => {
@@ -30,7 +30,9 @@ export const JoinGameRoom = ({ gameRoomCode }: { gameRoomCode: string }) => {
       playerName,
     });
 
-    // cookies.set("");
+    setPlayerTokenCookie({ gameRoomCode, token });
+
+    revalidatePath(`/game-room/play/${gameRoomCode}`);
   };
 
   return (

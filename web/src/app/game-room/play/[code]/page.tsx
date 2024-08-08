@@ -1,13 +1,8 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getGameRoomByCode } from "~/server/service/game";
+import { hasPlayerTokenCookie } from "~/server/service/player";
+import { GameRoomContainer } from "./_components/game-room-container";
 import { JoinGameRoom } from "./_components/join-game-room";
 
 export default async function GameRoomPlayByCodePage({
@@ -21,20 +16,19 @@ export default async function GameRoomPlayByCodePage({
     notFound();
   }
 
-  const hasPlayerTokenCookie = cookies().has("player-token");
+  const playerTokenCookie = hasPlayerTokenCookie({
+    gameRoomCode: gameRoom.code,
+  });
 
   return (
     <div className="container flex justify-center">
       <Card className="w-2/3">
         <CardHeader>
           <CardTitle>{gameRoom.title ?? gameRoom.topic}</CardTitle>
-          <CardDescription>
-            Create and host your own trivia games on a wide range of topics
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          {hasPlayerTokenCookie ? (
-            <div>Player is in the game</div>
+          {playerTokenCookie ? (
+            <GameRoomContainer gameRoom={gameRoom} />
           ) : (
             <JoinGameRoom gameRoomCode={gameRoom.code} />
           )}

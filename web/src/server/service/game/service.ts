@@ -1,9 +1,8 @@
+import axios from "axios";
 import { env } from "~/env";
 import { GameRoom } from "./type";
-import axios from "axios";
-import { z } from "zod";
 
-const GAME_ROOM_API = `${env.API_ROOT_URL}/game-room`;
+export const GAME_ROOM_API = `${env.API_ROOT_URL}/game-room`;
 
 export async function createGameRoom({
   authToken,
@@ -30,44 +29,26 @@ export async function getGameRoomByCode({
 }: {
   gameRoomCode: string;
 }) {
-  const response = await axios(`${GAME_ROOM_API}/code`, {
+  const searchParams = new URLSearchParams({
+    gameRoomCode,
+  }).toString();
+
+  const url = `${GAME_ROOM_API}/code?` + searchParams;
+
+  console.log(url);
+
+  const response = await fetch(url, {
     method: "GET",
-    validateStatus: (status) => status === 200 || status === 404,
-    params: {
-      gameRoomCode,
+    next: {
+      revalidate: 15,
     },
   });
+
+  console.log(response.status);
 
   if (response.status === 404) {
     return null;
   }
 
-  return GameRoom.parse(response.data);
-}
-
-export async function joinGameRoom({
-  gameRoomCode,
-  playerName,
-}: {
-  gameRoomCode: string;
-  playerName: string;
-}): Promise<{ token: string }> {
-  const response = await fetch(`${GAME_ROOM_API}/join`, {
-    method: "POST",
-    body: JSON.stringify({ name: playerName, gameRoomCode }),
-  });
-
-  if (response.status === 404) {
-    throw new Error("Game room not found");
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to join game room");
-  }
-
-  return z
-    .object({
-      token: z.string(),
-    })
-    .parse(await response.json());
+  return GameRoom.parse(await response.json());
 }

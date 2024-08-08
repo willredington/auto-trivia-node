@@ -17,9 +17,9 @@ const ExpectedHeaders = z.object({
 });
 
 const ExpectedJsonPayload = z.object({
-  gameRoomCode: z.string(),
-  questionIndex: z.number(),
   answer: z.string(),
+  gameRoomCode: z.string(),
+  questionIndex: z.coerce.number(),
 });
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -99,9 +99,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     });
 
     return jsonResponse({
-      statusCode: 200,
+      statusCode: 201,
       body: {
-        token: playerToken,
+        message: "Answer recorded",
       },
     });
   } catch (error) {
