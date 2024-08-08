@@ -174,6 +174,10 @@ export async function getGameRoomForUser({
 
   const value = await redisClient.hgetall(gameRoomKey);
 
+  if (!value) {
+    return null;
+  }
+
   return GameRoom.parse(value);
 }
 

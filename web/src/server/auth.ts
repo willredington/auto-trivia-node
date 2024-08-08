@@ -1,14 +1,11 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import {
   getServerSession,
   type DefaultSession,
   type NextAuthOptions,
 } from "next-auth";
-import { type Adapter } from "next-auth/adapters";
 import CognitoProvider from "next-auth/providers/cognito";
 
 import { env } from "~/env";
-import { db } from "~/server/db";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -18,6 +15,7 @@ import { db } from "~/server/db";
  */
 declare module "next-auth" {
   interface Session extends DefaultSession {
+    idToken: string;
     user: {
       id: string;
       // ...other properties
@@ -33,15 +31,25 @@ declare module "next-auth" {
 
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, user }) => ({
+    jwt: ({ token, account, ...rest }) => {
+      if (account?.id_token) {
+        token.idToken = account.id_token;
+      }
+
+      return {
+        ...token,
+        ...rest,
+      };
+    },
+    session: ({ session, token }) => ({
       ...session,
+      idToken: token.idToken,
       user: {
         ...session.user,
-        id: user.id,
+        id: token.sub,
       },
     }),
   },
-  adapter: PrismaAdapter(db) as Adapter,
   providers: [
     CognitoProvider({
       issuer: env.COGNITO_ISSUER,

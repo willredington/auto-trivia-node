@@ -19,7 +19,7 @@ export async function createUserGameRoomCodeEntry({
   const keyExists = await redisClient.exists(key);
 
   if (keyExists === 1) {
-    console.log(
+    console.warn(
       `User with id ${input.userId} already has a game room code entry`
     );
   }
