@@ -30,7 +30,7 @@ export const JoinGameRoom = ({ gameRoomCode }: { gameRoomCode: string }) => {
       playerName,
     });
 
-    cookies.set("");
+    // cookies.set("");
   };
 
   return (
